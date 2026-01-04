@@ -14,14 +14,22 @@ class VideoController extends Controller
      */
     public function getVideoInfo(Request $request)
     {
+        // Log the incoming request for debugging
+        \Log::info('Video info request received', [
+            'all_data' => $request->all(),
+            'url' => $request->input('url'),
+        ]);
+
         $validator = Validator::make($request->all(), [
-            'url' => 'required|url'
+            'url' => 'required|string'
         ]);
 
         if ($validator->fails()) {
+            \Log::error('Validation failed', ['errors' => $validator->errors()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid URL provided'
+                'message' => 'Invalid URL provided',
+                'errors' => $validator->errors()
             ], 400);
         }
 
