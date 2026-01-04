@@ -70,11 +70,14 @@ class VideoController extends Controller
 
         \Log::info('Using yt-dlp at: ' . $ytDlpPath);
 
-        // Get video info using yt-dlp
+        // Get video info using yt-dlp with bot detection bypass
+        // Using android client which has better success rate
         $process = new Process([
             $ytDlpPath,
             '--dump-json',
             '--no-playlist',
+            '--extractor-args',
+            'youtube:player_client=android',
             $url
         ]);
 
