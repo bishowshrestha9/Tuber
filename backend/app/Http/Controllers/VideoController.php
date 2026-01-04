@@ -35,31 +35,40 @@ class VideoController extends Controller
 
         $url = $request->input('url');
 
-        // Use full path to yt-dlp
-        $ytDlpPath = '/opt/homebrew/bin/yt-dlp';
+        // Use full path to yt-dlp - check multiple common locations
+        $ytDlpPaths = [
+            '/usr/local/bin/yt-dlp',      // Linux (common)
+            '/usr/bin/yt-dlp',             // Linux (apt install)
+            '/opt/homebrew/bin/yt-dlp',    // Mac (Homebrew ARM)
+            '/usr/local/bin/yt-dlp',       // Mac (Homebrew Intel)
+        ];
 
-        // Check if yt-dlp exists
-        if (!file_exists($ytDlpPath)) {
-            // Try alternative common paths
-            $alternativePaths = [
-                '/usr/local/bin/yt-dlp',
-                '/usr/bin/yt-dlp',
-            ];
-
-            foreach ($alternativePaths as $path) {
-                if (file_exists($path)) {
-                    $ytDlpPath = $path;
-                    break;
-                }
-            }
-
-            if (!file_exists($ytDlpPath)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'yt-dlp is not installed on the server. Please install it first.'
-                ], 500);
+        $ytDlpPath = null;
+        foreach ($ytDlpPaths as $path) {
+            if (file_exists($path)) {
+                $ytDlpPath = $path;
+                break;
             }
         }
+
+        // If not found in common locations, try using 'which' command
+        if (!$ytDlpPath) {
+            $process = new Process(['which', 'yt-dlp']);
+            $process->run();
+            if ($process->isSuccessful()) {
+                $ytDlpPath = trim($process->getOutput());
+            }
+        }
+
+        if (!$ytDlpPath || !file_exists($ytDlpPath)) {
+            \Log::error('yt-dlp not found in any common location');
+            return response()->json([
+                'success' => false,
+                'message' => 'yt-dlp is not installed on the server. Please install it first.'
+            ], 500);
+        }
+
+        \Log::info('Using yt-dlp at: ' . $ytDlpPath);
 
         // Get video info using yt-dlp
         $process = new Process([
